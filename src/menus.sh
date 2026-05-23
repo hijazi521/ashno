@@ -20,12 +20,16 @@ Running without commands launches the interactive menu.
 | Flag | Description |
 |---|---|
 | \`-c, --configure\` | Configure installed tools (ZSH, Git, Neovim, etc.) |
+| \`-b, --backup\` | Create a backup of your environment |
+| \`--restore <FILE>\` | Restore from a backup archive |
 | \`-u, --update\` | Checks for and applies updates |
 | \`-h, --help\` | Display this help manual and exit |
 
 ## Examples
 \`ashno --profile 2_extended --all\`
-\`ashno --configure\`" | gum style --border rounded --border-foreground 212 --padding "1 2" --margin "0 1"
+\`ashno --configure\`
+\`ashno --backup\`
+\`ashno --restore ~/backup.tar.gz\`" | gum style --border rounded --border-foreground 212 --padding "1 2" --margin "0 1"
     else
         echo -e "A professional, self-updating tool that installs and configures packages from profiles."
         echo; echo -e "${BOLD}${YELLOW}USAGE:${NC}"; echo -e "  ashno ${PURPLE}[COMMANDS]${NC}"; echo -e "    Running without commands launches the interactive menu."
@@ -34,9 +38,11 @@ Running without commands launches the interactive menu.
         printf "  ${PURPLE}%-20s${NC} %s\n" "--all | --pkg | ..." "Required. The action to perform (install all, pkg, etc.)."
         echo; echo -e "${BOLD}${YELLOW}UTILITY COMMANDS:${NC}"
         printf "  ${PURPLE}%-20s${NC} %s\n" "-c, --configure" "Configure installed tools (ZSH, Git, Neovim, etc.)."
+        printf "  ${PURPLE}%-20s${NC} %s\n" "-b, --backup" "Create a backup of your environment."
+        printf "  ${PURPLE}%-20s${NC} %s\n" "--restore <FILE>" "Restore from a backup archive."
         printf "  ${PURPLE}%-20s${NC} %s\n" "-u, --update" "Checks for and applies updates to Ashno itself."
         printf "  ${PURPLE}%-20s${NC} %s\n" "-h, --help" "Display this help manual and exit."
-        echo; echo -e "${BOLD}${YELLOW}EXAMPLES:${NC}"; echo -e "  ashno --profile 2_extended --all"; echo -e "  ashno --configure"; echo
+        echo; echo -e "${BOLD}${YELLOW}EXAMPLES:${NC}"; echo -e "  ashno --profile 2_extended --all"; echo -e "  ashno --backup"; echo
     fi
 }
 
@@ -84,6 +90,7 @@ main_menu() {
             "Install NPM Packages" \
             "Install PIP Packages" \
             "⚙  Configure Installed Tools" \
+            "📦  Backup & Restore" \
             "Change Profile" \
             "Exit Ashno")
         case "$choice" in
@@ -92,9 +99,10 @@ main_menu() {
             "Install NPM Packages")              main_choice=3 ;;
             "Install PIP Packages")              main_choice=4 ;;
             "⚙  Configure Installed Tools")      main_choice=5 ;;
-            "Change Profile")                    main_choice=6 ;;
-            "Exit Ashno")                        main_choice=7 ;;
-            *)                                   main_choice=7 ;;
+            "📦  Backup & Restore")              main_choice=6 ;;
+            "Change Profile")                    main_choice=7 ;;
+            "Exit Ashno")                        main_choice=8 ;;
+            *)                                   main_choice=8 ;;
         esac
     else
         echo -e "  ${BOLD}Active Profile:${NC} ${YELLOW}${SELECTED_PROFILE}${NC}\n"
@@ -103,8 +111,9 @@ main_menu() {
         echo -e "  ${CYAN}3)${NC}  Install ${BOLD}NPM${NC} Packages"
         echo -e "  ${CYAN}4)${NC}  Install ${BOLD}PIP${NC} Packages"
         echo; echo -e "  ${CYAN}5)${NC}  ⚙  ${BOLD}Configure${NC} Installed Tools"
-        echo -e "  ${CYAN}6)${NC}  Change Profile"
-        echo -e "  ${CYAN}7)${NC}  Exit Ashno"
+        echo -e "  ${CYAN}6)${NC}  📦  ${BOLD}Backup${NC} & Restore"
+        echo -e "  ${CYAN}7)${NC}  Change Profile"
+        echo -e "  ${CYAN}8)${NC}  Exit Ashno"
         print_prompt; read -r main_choice
     fi
 }

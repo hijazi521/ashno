@@ -3,7 +3,7 @@
 #
 # Ashno: The Professional Termux Toolkit Installer
 #
-# Version:      1.9.5
+# Version:      1.10.0
 # Author:       hakinexus
 # Description:  The definitive installer framework with a professional UI,
 #               automatic dependency resolution, and robust error handling.
@@ -24,6 +24,7 @@ source "$SRC_DIR/updater.sh"
 source "$SRC_DIR/engine.sh"
 source "$SRC_DIR/menus.sh"
 source "$SRC_DIR/configure.sh"
+source "$SRC_DIR/backup.sh"
 
 # ==============================================================================
 # SECTION: EXECUTION ENTRYPOINT
@@ -38,6 +39,12 @@ if [ $# -gt 0 ]; then
             -h|--help) print_help_menu; exit 0;;
             -u|--update) handle_updates "manual"; exit 0;;
             -c|--configure) configure_menu; exit 0;;
+            -b|--backup) create_backup; exit 0;;
+            --restore)
+                if [ -z "${2:-}" ]; then
+                    echo -e "${RED}Error: --restore requires a backup file path.${NC}"; exit 1
+                fi
+                restore_backup "$2"; exit 0;;
             --profile)
                 if [ -z "${2:-}" ] || [[ "$2" == --* ]]; then
                     echo -e "${RED}Error: --profile requires a value.${NC}"; exit 1
@@ -73,8 +80,9 @@ while true; do
         3) install_npm;;
         4) install_pip;;
         5) configure_menu; continue;;
-        6) profile_selection_menu; continue;;
-        7) echo -e "\nExiting Ashno."; exit 0;;
+        6) backup_menu; continue;;
+        7) profile_selection_menu; continue;;
+        8) echo -e "\nExiting Ashno."; exit 0;;
         *) echo -e "\n${RED}Invalid choice.${NC}"; sleep 1; continue;;
     esac
     print_summary_report
