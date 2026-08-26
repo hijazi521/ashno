@@ -1,18 +1,26 @@
+# Generated runtime state
 logs/
-vid/
+.ashno-backup/
+*.log
+*.tar
+*.tar.gz
 
-# Media files
+# Local development and media
+vid/
 *.jpg
 *.png
 *.mp4
 *.gif
 *.webm
 
-# Claude Code
+# Editor and assistant state
+.DS_Store
+.vscode/
+.idea/
 CLAUDE.md
 .claude/
 
-# Sensitive / environment
+# Sensitive files and local environment
 .env
 .env.*
 *.key

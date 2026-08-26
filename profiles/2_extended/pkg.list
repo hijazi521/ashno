@@ -1,36 +1,25 @@
 # ====================================================================
 # Ashno Profile 2: PKG Extended
-# Specialized tools for developers, security researchers, and power users.
+# Packages available from the standard Termux repositories.
 # ====================================================================
 
 # --- Advanced Development & Databases ---
-# More powerful tools for software development, debugging, and data persistence
 mariadb
 postgresql
-postgresql-contrib
 sqlite
 redis
 elixir
 erlang
-julia
 kotlin
 doxygen
 stow
 
-# --- Advanced Networking & Security ---
-# A suite of tools for penetration testing and network analysis
-# NOTE: Some of these tools may be used for offensive security testing.
-#       Always have explicit permission before scanning any network.
-hydra
-metasploit
-sqlmap
-radare2
-hashcat
+# --- Network and security utilities ---
 tshark
 proxychains-ng
+radare2
 
-# --- Data & Text Manipulation ---
-# Highly efficient tools for processing data formats and documents
+# --- Data and text manipulation ---
 jq
 yq
 libxml2-utils
@@ -38,21 +27,20 @@ libxslt
 pandoc
 poppler
 
-# --- Advanced System Utilities ---
-# Utilities for network monitoring, better compression, and media manipulation
-iftop
-nethogs
+# --- System utilities ---
+bmon
 p7zip
 imagemagick
 ffmpeg
 procs
-bottom
-glances
+btop
 
-# --- Terminal & Shell Enhancements ---
-# Tools to improve code navigation and provide a better shell experience
+# --- Terminal and shell enhancements ---
 ctags
 fzf
-the_silver_searcher
+silversearcher-ag
 ripgrep
 cmatrix
+
+# Tools not shipped by the configured official Termux repositories are kept
+# out of the default profile. Install them separately from a trusted source.

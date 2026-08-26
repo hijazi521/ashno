@@ -1,238 +1,153 @@
-<div align="center">
-
 # Ashno
 
-**The Definitive Toolkit Installer & Configurator for Termux**
+**Ashno is a security-conscious toolkit installer and configurator for Termux.** It installs curated packages from profile files, configures common development tools, and provides validated private backups without hiding package-manager or filesystem side effects.
 
-<br>
+## Status
 
-<p>
-  <img alt="Version" src="https://img.shields.io/badge/version-1.9.5-222.svg?style=for-the-badge&logo=github&logoColor=white">
-  <img alt="Platform" src="https://img.shields.io/badge/Termux-Android-34a853?style=for-the-badge&logo=android&logoColor=white">
-  <img alt="License" src="https://img.shields.io/badge/license-MIT-a371f7?style=for-the-badge">
-</p>
-<p>
-  <img alt="Bash" src="https://img.shields.io/badge/Pure_Bash-4EAA25?style=flat-square&logo=gnubash&logoColor=white">
-  <img alt="Maintained" src="https://img.shields.io/badge/maintained-yes-58a6ff?style=flat-square">
-  <img alt="PRs Welcome" src="https://img.shields.io/badge/PRs-welcome-e3b341?style=flat-square">
-</p>
+Ashno is maintained on the `main` branch. The current release version is stored in [`VERSION`](VERSION). The project is designed for modern Termux installations using the standard package repositories; package availability still varies by architecture and enabled repository.
 
-<br>
+## Safety first
 
-Install 200+ packages, configure your shell, editor, prompt, and terminal &mdash; all from one command.
+Ashno changes the current Termux user’s packages and configuration files. Review the profile files before installation and run the program from a trusted checkout. The program does not enable Termux external command execution by default, does not execute a downloaded shell script for Oh-My-Zsh, and disables NPM lifecycle scripts unless explicitly requested.
 
-<br>
-</div>
+Backups are written to private Termux storage by default. Private SSH keys are excluded from noninteractive backups and require an explicit interactive confirmation. Restore validates the archive layout, rejects symlinks and special files, limits archive resources, and writes only known configuration paths.
 
----
+> Do not use old installer links that pipe a remote response directly into Bash. Use the repository-owned installer below or clone the repository and inspect it first.
 
-## Why Ashno
+## Installation
 
-Setting up Termux properly means installing dozens of packages across three managers, configuring ZSH, Starship, Git, Neovim, SSH keys, terminal properties, and a Nerd Font. Most people follow 10 different guides and spend hours getting it right.
-
-Ashno does all of it in minutes. Pick a profile, let it install, then configure everything interactively. One tool, complete setup, zero guesswork.
-
----
-
-## Features
-
-| | |
-|:--|:--|
-| **Profile-Driven Install** | Curated package tiers across `pkg`, `npm`, and `pip`. Pick a tier &mdash; Ashno installs everything below it automatically. |
-| **Configuration Engine** | Interactive post-install setup for ZSH + Oh-My-Zsh, Starship prompt, Git, Neovim (lazy.nvim), Termux properties, Nerd Font, and SSH keys. |
-| **Smart & Idempotent** | Detects already-installed packages and skips them. Safe to re-run at any time. |
-| **Timeout Protection** | Per-package install timeouts prevent source-compilation hangs from stalling the entire run. |
-| **Self-Updating** | Pulls the latest version from GitHub, detects local changes, and restarts cleanly. |
-| **Gum-Enhanced UI** | Styled menus, spinners, and prompts powered by [gum](https://github.com/charmbracelet/gum) with full ASCII fallback. |
-
----
-
-## Quick Start
-
-**One-line install** &mdash; clones the repo, sets permissions, and makes `ashno` available globally:
+Install the repository-owned bootstrap script after reviewing it:
 
 ```bash
-bash -c "$(curl -fsSL https://gist.githubusercontent.com/hakinexus/7df8c6853d98b2f7de95e92d5446765d/raw/d877e0568d53c30e27b4a59ef088b02175f7c748/Install.sh)"
+curl -fsSL https://raw.githubusercontent.com/hakinexus/ashno/main/install.sh -o install.sh
+less install.sh
+bash install.sh
 ```
 
-**Manual clone** &mdash; for contributors or those who want to inspect the code first:
+The installer targets `https://github.com/hakinexus/ashno.git`, verifies an existing checkout’s remote, refuses local or divergent history, and uses fast-forward-only updates. For the strongest trust model, download a tagged release and verify its published checksum before running the installer.
+
+For a fully inspectable local installation:
 
 ```bash
 git clone https://github.com/hakinexus/ashno.git
-cd ashno && ./ashno
+cd ashno
+chmod 755 ashno
+./ashno --help
 ```
-
----
 
 ## Usage
 
-### Interactive Mode
+Running without arguments opens the interactive menu:
 
 ```bash
 ashno
 ```
 
-Launches the full interactive menu &mdash; select a profile, choose what to install, then optionally configure your tools.
-
-### Non-Interactive Mode
+Installation from a profile is explicit:
 
 ```bash
-ashno --profile 2_extended --all    # Install everything from the Extended tier
-ashno --profile 1_essentials --pkg  # Install only pkg packages from Essentials
-ashno --configure                   # Open the configuration menu directly
-ashno --update                      # Check for and apply updates
+ashno --profile 1_essentials --pkg
+ashno --profile 2_extended --all
+ashno --profile 3_complete --npm --allow-npm-scripts
 ```
 
-### All Flags
+The command-line installer requires `--profile` plus exactly one of `--all`, `--pkg`, `--npm`, or `--pip`. Use `--no-update` when the checkout has already been reviewed and you do not want a pre-install update check.
 
-| Flag | Short | Description |
-|:-----|:------|:------------|
-| `--profile <NAME>` | | Select a profile tier by directory name |
-| `--all` | | Install all package types (pkg + npm + pip) |
-| `--pkg` | | Install only pkg packages |
-| `--npm` | | Install only npm packages |
-| `--pip` | | Install only pip packages |
-| `--configure` | `-c` | Open the tool configuration menu |
-| `--update` | `-u` | Check for and apply Ashno updates |
-| `--help` | `-h` | Display the help manual |
+| Command or option | Purpose |
+|---|---|
+| `--help`, `-h` | Show help without installing dependencies or contacting the network. |
+| `--version` | Print the canonical release version. |
+| `--profile NAME` | Select a profile directory under `profiles/`. Path traversal and symlinked profiles are rejected. |
+| `--all` | Install PKG, NPM, and PIP entries from the selected cumulative profile. |
+| `--pkg`, `--npm`, `--pip` | Install one package type. |
+| `--configure`, `-c` | Open the interactive configuration menu. |
+| `--backup`, `-b` | Create a private backup archive. |
+| `--restore FILE` | Validate and restore an archive. |
+| `--update`, `-u` | Check for and apply a verified fast-forward update. |
+| `--non-interactive` | Disable prompts and keypress waits. It never includes SSH keys or installs restore packages by itself. |
+| `--yes` | Required for destructive noninteractive restore operations. |
+| `--restore-packages` | Explicitly permit package installation during a noninteractive restore. |
+| `--restore-ssh` | Explicitly permit SSH-file restoration during a noninteractive restore. |
+| `--allow-npm-scripts` | Opt in to NPM package lifecycle scripts. They are disabled by default. |
+| `--no-update` | Skip the pre-install update check. |
 
----
+Examples:
+
+```bash
+ashno --profile 2_extended --all --no-update
+ashno --backup --non-interactive
+ashno --restore "$HOME/.ashno-backup/ashno_backup_20260826_120000.tar.gz"
+ashno --restore backup.tar.gz --non-interactive --yes --restore-packages --restore-ssh
+```
 
 ## Profiles
 
-Profiles live in the `profiles/` directory. Each tier is **cumulative** &mdash; selecting a higher tier automatically includes every package from the tiers below it.
+Profiles are cumulative when their names begin with a numeric level. `2_extended` includes entries from `1_essentials`; `3_complete` includes entries from both lower levels. Full-line comments and inline comments after whitespace are supported.
 
-### `1_essentials`
-
-The foundation. Core shell tools, compilers, languages, networking, and editors.
-
-<details>
-<summary>Highlights</summary>
-
-- **Shell & CLI**: zsh, fish, starship, eza, bat, fd, zoxide, htop, tmux
-- **Languages**: Python, Node.js, Go, Rust, Zig, Ruby, Perl, PHP, Java, Dart, Nim
-- **Dev Tools**: git, lazygit, gh, build-essential, clang, cmake
-- **Editors**: nano, vim, neovim, emacs, micro
-- **Networking**: openssh, curl, wget, nmap, tcpdump, whois, dnsutils
-- **NPM**: yarn, pnpm, webpack, typescript, eslint, prettier, express, react
-- **PIP**: pandas, scikit-learn, django, flask, fastapi, scrapy, ansible, jupyter
-
-</details>
-
-### `2_extended`
-
-Everything in Essentials, plus specialized tools for developers, security researchers, and power users.
-
-<details>
-<summary>Highlights</summary>
-
-- **Databases**: MariaDB, PostgreSQL, SQLite, Redis
-- **Security**: hydra, sqlmap, radare2, hashcat, tshark, proxychains-ng
-- **Data**: jq, yq, pandoc, imagemagick, ffmpeg
-- **System**: fzf, ripgrep, ctags, procs, bottom, glances
-- **NPM**: jest, mocha, vite, nx, turbo, serverless, vercel
-- **PIP**: httpx, aiohttp, poetry, pydantic, celery, ruff, scapy, jupyterlab
-
-</details>
-
-### `3_complete`
-
-The full arsenal. Everything from both tiers below, plus expert-level tools.
-
-<details>
-<summary>Highlights</summary>
-
-- **Reverse Engineering**: gdb, strace, binwalk, sleuthkit, yara
-- **Cryptography**: gnupg, john, steghide
-- **Languages**: Lua, OCaml, Clojure, Haskell, Fennel
-- **Cloud & DevOps**: k9s, kubectl, helm, terraform
-- **NPM**: truffle, hardhat, firebase-tools, cordova, @ionic/cli
-- **PIP**: boto3, google-cloud-storage, pyspark, dask, polars, capstone, biopython
-
-</details>
-
-### Custom Profiles
-
-Create your own:
-
-```
+```text
 profiles/
-  my_setup/
-    pkg.list    # one package per line, # for comments
+  1_essentials/
+    pkg.list
+    npm.list
+    pip.list
+  2_extended/
+    pkg.list
+    npm.list
+    pip.list
+  3_complete/
+    pkg.list
     npm.list
     pip.list
 ```
 
-Ashno discovers custom profiles automatically and shows them in the selection menu.
+A custom profile may be added with a name containing letters, numbers, underscores, and hyphens. Each package manager reads one package token per line. Test a new profile in a disposable environment before using it on a primary device.
 
----
+## Configuration
 
-## Configuration Engine
+The configuration menu can set up ZSH, Starship, Git, Neovim, Termux terminal properties, and an Ed25519 SSH key pair. Existing files are backed up to the private `~/.ashno-backup` directory before replacement. Configuration writes use temporary files and fail closed when the backup or write cannot be completed.
 
-After installation, Ashno offers to configure your tools interactively. Each configurator detects existing setups and asks before making changes. Existing files are backed up to `~/.ashno-backup/` with timestamps.
+Remote configuration dependencies are fetched from canonical URLs at pinned commits. The Neovim bootstrap pins the lazy.nvim release and verifies the clone and checkout before adding it to the runtime path. Plugin versions should be locked by the user through the generated lazy.nvim lockfile before relying on a long-lived environment.
 
-Access it anytime:
+The Termux configurator does not enable `allow-external-apps`. That property changes the command-execution boundary for third-party integrations and should be enabled manually only when a trusted integration requires it; see the [Termux RUN_COMMAND documentation](https://github.com/termux/termux-app/wiki/RUN_COMMAND-Intent).
 
-```bash
-ashno --configure
-```
+## Backups and restore
 
-### What It Configures
+Backups contain package metadata and selected configuration files. PIP and NPM metadata retain versions where the package manager exposes them. The archive is created with mode `600` in private Termux storage. SSH keys are a separate opt-in and should not be copied to shared Android storage or unencrypted cloud storage.
 
-| Tool | What Ashno Does |
-|:-----|:----------------|
-| **ZSH + Oh-My-Zsh** | Installs oh-my-zsh, zsh-autosuggestions, zsh-syntax-highlighting. Writes a `.zshrc` with modern aliases (eza, bat, fd, rg, lazygit), fzf integration, history config, and key bindings. Sets ZSH as default shell. |
-| **Starship** | Drops a `starship.toml` with language-aware segments (Python, Node, Rust, Go, Java), git status, and command duration timer. |
-| **Git** | Interactive prompts for name, email, and editor. Adds 9 aliases (`st`, `lg`, `co`, `br`, `ci`, `unstage`, `last`, `staged`, `amend`) and sensible defaults (rebase pull, auto-setup remote). |
-| **Neovim** | Bootstraps lazy.nvim with Catppuccin Mocha, lualine, Telescope, Treesitter (10 languages), gitsigns, autopairs, Comment.nvim, and indent guides. |
-| **Termux** | Writes `termux.properties` with a two-row extra keys layout, bar cursor, dark UI. Optionally downloads and installs JetBrains Mono Nerd Font for icon support. |
-| **SSH** | Generates an ed25519 key pair, uses your Git email as the comment, and displays the public key for easy copy to GitHub/GitLab. |
-
----
+Restore is deliberately conservative. It accepts only the manifest, profile lists, known dotfiles, and the four supported SSH files. It rejects absolute paths, traversal, duplicate members, symlinks, hard links, device files, oversized archives, and malformed manifests. Package restoration is never implicit in noninteractive mode.
 
 ## Architecture
 
+```text
+ashno                 Entry point, argument parsing, dispatch, exit codes
+src/config.sh         Version, paths, trust settings, limits, runtime state
+src/utils.sh          UI helpers, validation, bounded execution, private logs
+src/engine.sh         Profile parser, package installation, preflight checks
+src/updater.sh        Canonical-remote and fast-forward update validation
+src/menus.sh          Interactive menus, help, summaries
+src/configure.sh      Safe configuration writers and pinned bootstraps
+src/backup.sh         Private backup creation and conservative restore
+profiles/             Cumulative PKG, NPM, and PIP package lists
+install.sh            Repository-owned installation bootstrap
+tests/run_tests.sh    Read-only and temporary-fixture regression tests
 ```
-ashno                  Entry point — routes to interactive or CLI flow
-src/
-  config.sh            Global constants, colors, state arrays
-  utils.sh             UI helpers, spinners, gum bootstrap, signal traps
-  engine.sh            Package installer — batch-then-fallback with timeouts
-  menus.sh             Profile selection, main menu, help, summary report
-  updater.sh           Git-based self-update with branch detection
-  configure.sh         Post-install configuration engine (6 configurators)
-profiles/
-  1_essentials/        pkg.list, npm.list, pip.list
-  2_extended/          pkg.list, npm.list, pip.list
-  3_complete/          pkg.list, npm.list, pip.list
+
+## Development
+
+Run the local checks before opening a pull request:
+
+```bash
+bash -n ashno src/*.sh tests/run_tests.sh
+shellcheck -x ashno src/*.sh tests/run_tests.sh
+./tests/run_tests.sh
 ```
 
-**Key design patterns:**
+The tests use temporary directories and fake inputs; they do not install packages, change the real home directory, rotate real SSH keys, or execute remote installers.
 
-- **Cumulative profile merging** &mdash; selecting tier N merges all `.list` files from tiers 1 through N, deduplicated and sorted
-- **Batch-then-sequential fallback** &mdash; packages install as a batch first; on failure, falls back to one-by-one with per-package status tracking
-- **Per-package timeouts** &mdash; prevents source-compilation hangs (5 min per package, 10 min for batch) using GNU `timeout`
-- **Gum with ASCII fallback** &mdash; every UI component checks for `gum` and degrades gracefully to plain terminal output
-- **Config backup before overwrite** &mdash; all existing dotfiles backed up to `~/.ashno-backup/` with timestamps before any changes
+## Security reporting
 
----
-
-## Contributing
-
-Contributions are welcome. Fork the repo, create a feature branch (`feature/your-feature`), and open a pull request.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
----
+Please do not publish sensitive details in a public issue. Read [`SECURITY.md`](SECURITY.md) for the supported disclosure route and include the Ashno version, device architecture, Termux repository configuration, reproduction steps, and relevant logs with secrets removed.
 
 ## License
 
-MIT &mdash; see [LICENSE](LICENSE) for details.
-
----
-
-<div align="center">
-<br>
-<sub>Built for Termux by <a href="https://github.com/hakinexus">hakinexus</a></sub>
-<br><br>
-</div>
+Ashno is released under the [MIT License](LICENSE).

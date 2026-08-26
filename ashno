@@ -1,96 +1,217 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ==============================================================================
-#
-# Ashno: The Professional Termux Toolkit Installer
-#
-# Version:      1.10.0
-# Author:       hakinexus
-# Description:  The definitive installer framework with a professional UI,
-#               automatic dependency resolution, and robust error handling.
-#
+# Ashno — Professional Termux Toolkit Installer and Configurator
 # ==============================================================================
 
-# --- Globals and Configuration ---
-readonly SCRIPT_NAME="Ashno"
-readonly SCRIPT_PATH=$(readlink -f "$0")
-readonly SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
-readonly SRC_DIR="$SCRIPT_DIR/src"
+set -o pipefail
+
+SCRIPT_PATH=$(readlink -f "$0" 2>/dev/null || printf '%s' "$0")
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$SCRIPT_PATH")" && pwd -P)
+SRC_DIR="$SCRIPT_DIR/src"
+readonly SCRIPT_PATH SCRIPT_DIR SRC_DIR
 ORIGINAL_ARGS=("$@")
 
-# --- Source Modules ---
-source "$SRC_DIR/config.sh"
+# shellcheck source=src/config.sh
+source "$SCRIPT_DIR/src/config.sh"
+# shellcheck source=src/utils.sh
 source "$SRC_DIR/utils.sh"
+# shellcheck source=src/updater.sh
 source "$SRC_DIR/updater.sh"
+# shellcheck source=src/engine.sh
 source "$SRC_DIR/engine.sh"
+# shellcheck source=src/menus.sh
 source "$SRC_DIR/menus.sh"
+# shellcheck source=src/configure.sh
 source "$SRC_DIR/configure.sh"
+# shellcheck source=src/backup.sh
 source "$SRC_DIR/backup.sh"
 
-# ==============================================================================
-# SECTION: EXECUTION ENTRYPOINT
-# ==============================================================================
-if [ ! -d "$PROFILES_DIR" ]; then echo -e "${RED}Fatal Error: '${PROFILES_DIR}/' not found.${NC}"; exit 1; fi
+finish() {
+    local rc="$1"
+    cleanup_runtime
+    exit "$rc"
+}
+trap 'finish $?' EXIT
 
-# --- Non-Interactive Mode ---
-if [ $# -gt 0 ]; then
-    profile_arg=""; action_arg=""
-    while [ $# -gt 0 ]; do
+fatal() {
+    print_formatting error "$1"
+    return 1
+}
+
+parse_args() {
+    ACTION=""
+    SELECTED_PROFILE=""
+    NONINTERACTIVE=false
+    SKIP_UPDATE=false
+    ALLOW_NPM_SCRIPTS=false
+    CONFIRM_DESTRUCTIVE=false
+    RESTORE_PACKAGES=false
+    RESTORE_SSH=false
+
+    while [ "$#" -gt 0 ]; do
         case "$1" in
-            -h|--help) print_help_menu; exit 0;;
-            -u|--update) handle_updates "manual"; exit 0;;
-            -c|--configure) configure_menu; exit 0;;
-            -b|--backup) create_backup; exit 0;;
+            -h|--help)
+                ACTION=help
+                shift
+                ;;
+            --version)
+                ACTION=version
+                shift
+                ;;
+            -u|--update)
+                ACTION=update
+                shift
+                ;;
+            -c|--configure)
+                ACTION=configure
+                shift
+                ;;
+            -b|--backup)
+                ACTION=backup
+                shift
+                ;;
             --restore)
-                if [ -z "${2:-}" ]; then
-                    echo -e "${RED}Error: --restore requires a backup file path.${NC}"; exit 1
+                if [ "$#" -lt 2 ] || [ -z "$2" ] || [[ "$2" == -* ]]; then
+                    fatal "--restore requires an archive path."
+                    return 2
                 fi
-                restore_backup "$2"; exit 0;;
+                ACTION=restore
+                RESTORE_ARCHIVE="$2"
+                shift 2
+                ;;
             --profile)
-                if [ -z "${2:-}" ] || [[ "$2" == --* ]]; then
-                    echo -e "${RED}Error: --profile requires a value.${NC}"; exit 1
+                if [ "$#" -lt 2 ] || [ -z "$2" ] || [[ "$2" == -* ]]; then
+                    fatal "--profile requires a profile directory name."
+                    return 2
                 fi
-                profile_arg="$2"; shift 2;;
-            --all|--pkg|--npm|--pip) action_arg="$1"; shift 1;;
-            *) echo -e "${RED}Invalid argument: $1${NC}\nUse 'ashno --help'."; exit 1;;
+                SELECTED_PROFILE="$2"
+                shift 2
+                ;;
+            --all|--pkg|--npm|--pip)
+                if [ -n "$INSTALL_ACTION" ]; then
+                    fatal "Only one installation action may be selected."
+                    return 2
+                fi
+                INSTALL_ACTION="$1"
+                shift
+                ;;
+            --non-interactive)
+                NONINTERACTIVE=true
+                shift
+                ;;
+            --no-update)
+                SKIP_UPDATE=true
+                shift
+                ;;
+            --allow-npm-scripts)
+                ALLOW_NPM_SCRIPTS=true
+                shift
+                ;;
+            --yes)
+                CONFIRM_DESTRUCTIVE=true
+                shift
+                ;;
+            --restore-packages)
+                RESTORE_PACKAGES=true
+                shift
+                ;;
+            --restore-ssh)
+                RESTORE_SSH=true
+                shift
+                ;;
+            *)
+                fatal "Invalid argument: $1. Use 'ashno --help'."
+                return 2
+                ;;
         esac
     done
-    
-    if [ -z "$profile_arg" ] || [ -z "$action_arg" ] || [ ! -d "${PROFILES_DIR}/${profile_arg}" ]; then 
-        echo -e "${RED}Error: Valid --profile and action required.${NC}"; exit 1
+}
+
+run_install() {
+    if [ -z "$SELECTED_PROFILE" ] || [ -z "${INSTALL_ACTION:-}" ]; then
+        fatal "Installation requires both --profile <NAME> and --all, --pkg, --npm, or --pip."
+        return 2
     fi
-    
-    SELECTED_PROFILE="$profile_arg"
-    pre_flight_checks; handle_updates "auto"
+    validate_profile_name "$SELECTED_PROFILE" || return 2
+    NONINTERACTIVE=true
 
-    if [ "$action_arg" = "--all" ] || [ "$action_arg" = "--pkg" ]; then update_termux; install_pkg; fi
-    if [ "$action_arg" = "--all" ] || [ "$action_arg" = "--npm" ]; then install_npm; fi
-    if [ "$action_arg" = "--all" ] || [ "$action_arg" = "--pip" ]; then install_pip; fi
-    
-    print_summary_report; exit 0
-fi
+    pre_flight_checks "$INSTALL_ACTION" || return $?
+    if [ "$SKIP_UPDATE" = false ]; then
+        if ! handle_updates auto; then
+            print_formatting warn 'Update check failed; continuing with the current reviewed checkout.'
+        fi
+    fi
 
-# --- Interactive Mode ---
-clear; handle_updates "auto"; profile_selection_menu
-pre_flight_checks
-while true; do
-    main_menu
-    case $main_choice in
-        1) update_termux; install_pkg; install_npm; install_pip;;
-        2) update_termux; install_pkg;;
-        3) install_npm;;
-        4) install_pip;;
-        5) configure_menu; continue;;
-        6) backup_menu; continue;;
-        7) profile_selection_menu; continue;;
-        8) echo -e "\nExiting Ashno."; exit 0;;
-        *) echo -e "\n${RED}Invalid choice.${NC}"; sleep 1; continue;;
+    local rc=0
+    case "$INSTALL_ACTION" in
+        --all|--pkg) update_termux || rc=$?; install_pkg || rc=$? ;;
     esac
-    print_summary_report
-    offer_configuration
-    if command -v gum &>/dev/null; then
-        gum confirm "Return to main menu?" && continue || { echo -e "\nExiting Ashno."; exit 0; }
-    else
-        echo; read -n 1 -s -r -p "Press any key to return to the main menu..."
+    if [ "$INSTALL_ACTION" = "--all" ] || [ "$INSTALL_ACTION" = "--npm" ]; then
+        install_npm || rc=$?
     fi
-    SUCCESS_LIST=(); FAILURE_LIST=(); SKIPPED_LIST=();
-done
+    if [ "$INSTALL_ACTION" = "--all" ] || [ "$INSTALL_ACTION" = "--pip" ]; then
+        install_pip || rc=$?
+    fi
+
+    print_summary_report
+    return "$rc"
+}
+
+run_interactive() {
+    NONINTERACTIVE=false
+    clear 2>/dev/null || true
+    if ! handle_updates auto; then
+        print_formatting warn 'Update check failed; continuing with the current checkout.'
+    fi
+    profile_selection_menu || return $?
+    validate_profile_name "$SELECTED_PROFILE" || return 1
+    pre_flight_checks --all || return $?
+
+    while true; do
+        main_menu || return $?
+        case "$main_choice" in
+            1) update_termux; install_pkg; install_npm; install_pip ;;
+            2) update_termux; install_pkg ;;
+            3) install_npm ;;
+            4) install_pip ;;
+            5) configure_menu; continue ;;
+            6) backup_menu; continue ;;
+            7) profile_selection_menu; continue ;;
+            8) return 0 ;;
+            *) print_formatting error "Invalid choice."; sleep 1; continue ;;
+        esac
+        print_summary_report
+        offer_configuration
+        if command -v gum >/dev/null 2>&1; then
+            gum confirm "Return to main menu?" || return 0
+        else
+            wait_for_key
+        fi
+        SUCCESS_LIST=()
+        FAILURE_LIST=()
+        SKIPPED_LIST=()
+    done
+}
+
+main() {
+    INSTALL_ACTION=""
+    RESTORE_ARCHIVE=""
+    if [ "$#" -eq 0 ]; then
+        run_interactive
+        return $?
+    fi
+
+    parse_args "$@" || return $?
+    case "$ACTION" in
+        help) print_help_menu; return 0 ;;
+        version) printf 'Ashno %s\n' "$ASHNO_VERSION"; return 0 ;;
+        update) handle_updates manual; return $? ;;
+        configure) configure_menu; return $? ;;
+        backup) create_backup; return $? ;;
+        restore) restore_backup "$RESTORE_ARCHIVE"; return $? ;;
+        "") run_install ;;
+        *) fatal "No valid action was selected."; return 2 ;;
+    esac
+}
+
+main "$@"

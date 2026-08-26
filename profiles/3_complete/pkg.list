@@ -1,50 +1,35 @@
 # =================================================================
 # Ashno Profile 3: PKG Complete
-# Expert-level tools for reverse engineering, forensics, and more.
+# Advanced tools available from the standard Termux repositories.
 # =================================================================
 
-# --- Advanced Debugging & System Analysis ---
-# Tools for in-depth program analysis and system call tracing
+# --- Advanced debugging and system analysis ---
 gdb
 strace
 ltrace
 
-# --- Reverse Engineering & Forensics ---
-# A suite for binary analysis, firmware extraction, and file carving
+# --- Reverse engineering and forensics ---
 binwalk
 sleuthkit
 radare2
 yara
 
-# --- Cryptography & Password Auditing ---
-# Professional tools for encryption and password recovery
+# --- Cryptography and auditing ---
 gnupg
-john
 steghide
-hash-identifier
 
-# --- Software Defined Radio (SDR) & Wireless ---
-# Tools for interacting with SDR hardware for wireless analysis
-rtl-sdr
+# --- Audio and signal utilities ---
 sox
 
-
-# --- Niche & Systems Programming Languages ---
-# Compilers and runtimes for powerful, high-performance languages
-lua
-ocaml
-clojure
+# --- Systems programming languages ---
+lua53
 fennel
-haskell
 
-# --- Cloud Native & DevOps ---
-# Tools for container orchestration and infrastructure management
+# --- Cloud-native and DevOps ---
 k9s
 kubectl
 helm
-terraform
 
-# --- Miscellaneous Power-User Tools ---
-# A version manager for multiple languages and a GPS utility
-asdf
-gpsd
+# Packages unavailable from the configured official Termux repositories are
+# intentionally omitted from the default profile. Install them separately
+# from a trusted, architecture-compatible source when required.

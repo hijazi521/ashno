@@ -3,27 +3,24 @@
 # Specialist tools for Web3, IaC, and advanced automation.
 # ==============================================================
 
-# --- Blockchain & Web3 Development ---
-# Frameworks for developing, testing, and deploying smart contracts
+# --- Blockchain and Web3 development ---
 truffle
 hardhat
 ganache-cli
-# --- Infrastructure as Code (IaC) & Cloud ---
-# CLIs for defining and deploying cloud infrastructure with code
-cdk # AWS Cloud Development Kit
+
+# --- Infrastructure as Code and cloud ---
+cdk
 aws-cdk
-@google-cloud/gac-tools # Google Cloud
+@google-cloud/storage
 netlify-cli
 firebase-tools
 
-# --- Mobile App Development ---
-# Frameworks for building cross-platform mobile applications with web tech
+# --- Mobile application development ---
 cordova
 @ionic/cli
 
-# --- Documentation & API Generation ---
-# Tools for automatically generating project documentation and GraphQL APIs
+# --- Documentation and API generation ---
 jsdoc
 typedoc
-@graphql-cli/cli
+@graphql-codegen/cli
 swagger-cli

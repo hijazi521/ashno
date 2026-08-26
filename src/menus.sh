@@ -1,183 +1,152 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# shellcheck disable=SC2034
 # ==============================================================================
 # SECTION: MENUS & REPORTING
 # ==============================================================================
 
 print_help_menu() {
-    clear; print_banner "Ashno Help Manual"
-    if command -v gum &>/dev/null; then
-        gum format "## Usage
-\`ashno [COMMANDS]\`
-Running without commands launches the interactive menu.
+    cat <<EOF
+Ashno ${ASHNO_VERSION} — Termux toolkit installer and configurator
 
-## Installation Commands
-| Flag | Description |
-|---|---|
-| \`--profile <NAME>\` | Selects a profile by its directory name |
-| \`--all / --pkg / --npm / --pip\` | The action to perform |
+Usage:
+  ashno                                  Launch the interactive menu
+  ashno --profile NAME --all             Install all profile packages
+  ashno --profile NAME --pkg|--npm|--pip Install one package type
 
-## Utility Commands
-| Flag | Description |
-|---|---|
-| \`-c, --configure\` | Configure installed tools (ZSH, Git, Neovim, etc.) |
-| \`-b, --backup\` | Create a backup of your environment |
-| \`--restore <FILE>\` | Restore from a backup archive |
-| \`-u, --update\` | Checks for and applies updates |
-| \`-h, --help\` | Display this help manual and exit |
+Commands:
+  -h, --help                             Show this help
+      --version                          Show the installed version
+  -u, --update                           Check for and apply a verified update
+  -c, --configure                        Configure installed tools
+  -b, --backup                           Create a private backup archive
+      --restore FILE                     Validate and restore an archive
 
-## Examples
-\`ashno --profile 2_extended --all\`
-\`ashno --configure\`
-\`ashno --backup\`
-\`ashno --restore ~/backup.tar.gz\`" | gum style --border rounded --border-foreground 212 --padding "1 2" --margin "0 1"
-    else
-        echo -e "A professional, self-updating tool that installs and configures packages from profiles."
-        echo; echo -e "${BOLD}${YELLOW}USAGE:${NC}"; echo -e "  ashno ${PURPLE}[COMMANDS]${NC}"; echo -e "    Running without commands launches the interactive menu."
-        echo; echo -e "${BOLD}${YELLOW}INSTALLATION COMMANDS:${NC}"
-        printf "  ${PURPLE}%-20s${NC} %s\n" "--profile <NAME>" "Required. Selects a profile by its directory name."
-        printf "  ${PURPLE}%-20s${NC} %s\n" "--all | --pkg | ..." "Required. The action to perform (install all, pkg, etc.)."
-        echo; echo -e "${BOLD}${YELLOW}UTILITY COMMANDS:${NC}"
-        printf "  ${PURPLE}%-20s${NC} %s\n" "-c, --configure" "Configure installed tools (ZSH, Git, Neovim, etc.)."
-        printf "  ${PURPLE}%-20s${NC} %s\n" "-b, --backup" "Create a backup of your environment."
-        printf "  ${PURPLE}%-20s${NC} %s\n" "--restore <FILE>" "Restore from a backup archive."
-        printf "  ${PURPLE}%-20s${NC} %s\n" "-u, --update" "Checks for and applies updates to Ashno itself."
-        printf "  ${PURPLE}%-20s${NC} %s\n" "-h, --help" "Display this help manual and exit."
-        echo; echo -e "${BOLD}${YELLOW}EXAMPLES:${NC}"; echo -e "  ashno --profile 2_extended --all"; echo -e "  ashno --backup"; echo
-    fi
+Installation options:
+      --non-interactive                  Do not prompt or wait for keypresses
+      --no-update                        Do not self-update before installing
+      --allow-npm-scripts                Allow NPM lifecycle scripts during install
+      --yes                              Confirm destructive actions in automation
+      --restore-packages                 Install packages during noninteractive restore
+      --restore-ssh                      Restore SSH files during noninteractive restore
+
+Examples:
+  ashno --profile 2_extended --all
+  ashno --profile 1_essentials --pkg --no-update
+  ashno --backup --non-interactive
+EOF
 }
 
 print_summary_report() {
-    echo ""
-    
-    if command -v gum &>/dev/null; then
-        # Build each styled line separately, then join vertically inside a box
-        local header
-        header=$(gum style --foreground 212 --bold --align center "━━━ Installation Summary ━━━")
-        
-        local line_ok line_fail line_skip
-        line_ok=$(gum style --foreground 46 "  ✔ Successful:  ${#SUCCESS_LIST[@]}")
-        line_fail=$(gum style --foreground 196 "  ✖ Failed:      ${#FAILURE_LIST[@]}")
-        line_skip=$(gum style --foreground 214 "  ● Skipped:     ${#SKIPPED_LIST[@]}")
-        
-        local footer
-        footer=$(gum style --foreground 46 --bold --align center "Operation Complete ✔")
-        
-        # Assemble lines and wrap in a single clean box
-        printf "%s\n\n%s\n%s\n%s\n\n%s" \
-            "$header" "$line_ok" "$line_fail" "$line_skip" "$footer" \
-            | gum style --border rounded --border-foreground 212 --padding "1 2" --margin "0 1"
-    else
-        echo -e " Summary of all installation operations."; echo
-        echo -e " ${GREEN}✔ Successful: ${#SUCCESS_LIST[@]}${NC}"
-        echo -e " ${RED}✖ Failed:     ${#FAILURE_LIST[@]}${NC}"
-        echo -e " ${YELLOW}● Skipped:    ${#SKIPPED_LIST[@]}${NC}"
-
-        echo -e "\n${GREEN}${BOLD}Operation Complete.${NC}"
+    printf '\n'
+    print_banner 'Operation Summary'
+    printf '  %sSuccessful:%s %s\n' "$GREEN" "$NC" "${#SUCCESS_LIST[@]}"
+    printf '  %sFailed:%s     %s\n' "$RED" "$NC" "${#FAILURE_LIST[@]}"
+    printf '  %sSkipped:%s    %s\n' "$YELLOW" "$NC" "${#SKIPPED_LIST[@]}"
+    if [ "${#FAILURE_LIST[@]}" -gt 0 ]; then
+        printf '\n  Failed packages:\n'
+        printf '    - %s\n' "${FAILURE_LIST[@]}"
     fi
-    echo ""
+    printf '\n'
 }
 
 main_menu() {
-    clear; print_banner "Main Menu"
+    clear 2>/dev/null || true
+    print_banner 'Main Menu'
+    printf '  Active profile: %s\n\n' "$SELECTED_PROFILE"
 
-    if command -v gum &>/dev/null; then
-        gum style --foreground 250 --italic "  Profile: ${SELECTED_PROFILE}"
-        echo ""
+    if command -v gum >/dev/null 2>&1; then
         local choice
-        choice=$(gum choose --cursor "➜ " --cursor.foreground="212" --item.foreground="250" --selected.foreground="212" --selected.bold --header="Select an action:" \
-            "Full Installation (PKG, NPM, PIP)" \
-            "Install PKG Packages" \
-            "Install NPM Packages" \
-            "Install PIP Packages" \
-            "⚙  Configure Installed Tools" \
-            "📦  Backup & Restore" \
-            "Change Profile" \
-            "Exit Ashno")
+        choice=$(gum choose --cursor '➜ ' --cursor.foreground='212' \
+            --selected.foreground='212' --selected.bold --header='Select an action:' \
+            'Full Installation (PKG, NPM, PIP)' \
+            'Install PKG Packages' \
+            'Install NPM Packages' \
+            'Install PIP Packages' \
+            'Configure Installed Tools' \
+            'Backup & Restore' \
+            'Change Profile' \
+            'Exit Ashno') || return 1
         case "$choice" in
-            "Full Installation (PKG, NPM, PIP)") main_choice=1 ;;
-            "Install PKG Packages")              main_choice=2 ;;
-            "Install NPM Packages")              main_choice=3 ;;
-            "Install PIP Packages")              main_choice=4 ;;
-            "⚙  Configure Installed Tools")      main_choice=5 ;;
-            "📦  Backup & Restore")              main_choice=6 ;;
-            "Change Profile")                    main_choice=7 ;;
-            "Exit Ashno")                        main_choice=8 ;;
-            *)                                   main_choice=8 ;;
+            'Full Installation (PKG, NPM, PIP)') main_choice=1 ;;
+            'Install PKG Packages') main_choice=2 ;;
+            'Install NPM Packages') main_choice=3 ;;
+            'Install PIP Packages') main_choice=4 ;;
+            'Configure Installed Tools') main_choice=5 ;;
+            'Backup & Restore') main_choice=6 ;;
+            'Change Profile') main_choice=7 ;;
+            'Exit Ashno'|'') main_choice=8 ;;
+            *) main_choice=8 ;;
         esac
-    else
-        echo -e "  ${BOLD}Active Profile:${NC} ${YELLOW}${SELECTED_PROFILE}${NC}\n"
-        echo -e "  ${CYAN}1)${NC}  ${BOLD}Full Installation${NC} (PKG, NPM, PIP)"
-        echo -e "  ${CYAN}2)${NC}  Install ${BOLD}PKG${NC} Packages"
-        echo -e "  ${CYAN}3)${NC}  Install ${BOLD}NPM${NC} Packages"
-        echo -e "  ${CYAN}4)${NC}  Install ${BOLD}PIP${NC} Packages"
-        echo; echo -e "  ${CYAN}5)${NC}  ⚙  ${BOLD}Configure${NC} Installed Tools"
-        echo -e "  ${CYAN}6)${NC}  📦  ${BOLD}Backup${NC} & Restore"
-        echo -e "  ${CYAN}7)${NC}  Change Profile"
-        echo -e "  ${CYAN}8)${NC}  Exit Ashno"
-        print_prompt; read -r main_choice
+        return 0
     fi
+
+    printf '  1) Full Installation (PKG, NPM, PIP)\n'
+    printf '  2) Install PKG Packages\n'
+    printf '  3) Install NPM Packages\n'
+    printf '  4) Install PIP Packages\n'
+    printf '  5) Configure Installed Tools\n'
+    printf '  6) Backup & Restore\n'
+    printf '  7) Change Profile\n'
+    printf '  8) Exit Ashno\n'
+    print_prompt
+    IFS= read -r main_choice || return 1
+}
+
+_profile_paths() {
+    find "$PROFILES_DIR" -mindepth 1 -maxdepth 1 -type d ! -xtype l -print 2>/dev/null | sort
 }
 
 profile_selection_menu() {
-    while true; do
-        clear; print_banner "Choose Installation Profile"
-        local profiles=(); while IFS= read -r line; do profiles+=("$line"); done < <(find "$PROFILES_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
+    local -a profiles=()
+    mapfile -t profiles < <(_profile_paths)
+    if [ "${#profiles[@]}" -eq 0 ]; then
+        print_formatting error "No profiles found in $PROFILES_DIR."
+        return 1
+    fi
 
-        if [ ${#profiles[@]} -eq 0 ]; then echo -e "${RED}Error: No profiles found in '${PROFILES_DIR}/'.${NC}"; exit 1; fi
-
-        echo -e "Welcome to Ashno. Please select a profile to begin.\n"
-        local count=1
-
-        if command -v gum &>/dev/null; then
-            local gum_opts=()
-            for profile_path in "${profiles[@]}"; do
-                local profile_name; profile_name=$(basename "$profile_path")
-                case "$profile_name" in
-                    "1_essentials") gum_opts+=("Essentials") ;;
-                    "2_extended")   gum_opts+=("Extended (Recommended)") ;;
-                    "3_complete")   gum_opts+=("Complete") ;;
-                    *)              gum_opts+=("$profile_name") ;;
-                esac
-            done
-            gum_opts+=("Exit Ashno")
-
-            local gum_choice
-            gum_choice=$(gum choose --cursor "➜ " --cursor.foreground="212" --item.foreground="250" --selected.foreground="212" --selected.bold "${gum_opts[@]}")
-
-            if [ -z "$gum_choice" ] || [ "$gum_choice" = "Exit Ashno" ]; then
-                echo -e "\nExiting Ashno."; exit 0
-            fi
-
-            for i in "${!gum_opts[@]}"; do
-                if [ "${gum_opts[$i]}" = "$gum_choice" ]; then
-                    SELECTED_PROFILE=$(basename "${profiles[$i]}")
-                    return 0
-                fi
-            done
-        else
-            for profile_path in "${profiles[@]}"; do
-                local profile_name; profile_name=$(basename "$profile_path")
-                local option_line
-                case "$profile_name" in
-                    "1_essentials") option_line=$(printf "  ${CYAN}%2d)${NC} ${BOLD}Essentials${NC}" "$count") ;;
-                    "2_extended")   option_line=$(printf "  ${CYAN}%2d)${NC} ${BOLD}Extended${NC} ${GREEN}(Recommended)${NC}" "$count") ;;
-                    "3_complete")   option_line=$(printf "  ${CYAN}%2d)${NC} ${BOLD}Complete${NC}" "$count") ;;
-                    *)              option_line=$(printf "  ${CYAN}%2d)${NC} ${BOLD}%s${NC}" "$count" "$profile_name") ;;
-                esac
-                echo -e "$option_line"
-                count=$((count + 1))
-            done
-            printf "  ${CYAN}%2d)${NC} ${BOLD}%s${NC}\n" "$count" "Exit Ashno"
-
-            local choice; print_prompt; read -r choice
-            if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#profiles[@]} ]; then
-                SELECTED_PROFILE=$(basename "${profiles[$choice-1]}")
+    print_banner 'Choose Installation Profile'
+    if command -v gum >/dev/null 2>&1; then
+        local -a labels=()
+        local profile_path profile_name label
+        for profile_path in "${profiles[@]}"; do
+            profile_name=$(basename "$profile_path")
+            case "$profile_name" in
+                1_essentials) label='Essentials' ;;
+                2_extended) label='Extended (Recommended)' ;;
+                3_complete) label='Complete' ;;
+                *) label="$profile_name" ;;
+            esac
+            labels+=("$label")
+        done
+        labels+=('Exit Ashno')
+        local selected
+        selected=$(gum choose --cursor '➜ ' --cursor.foreground='212' \
+            --selected.foreground='212' --selected.bold "${labels[@]}") || return 1
+        [ -z "$selected" ] || [ "$selected" = 'Exit Ashno' ] && return 1
+        local i
+        for i in "${!profiles[@]}"; do
+            if [ "${labels[$i]}" = "$selected" ]; then
+                SELECTED_PROFILE=$(basename "${profiles[$i]}")
                 return 0
-            elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -eq "$count" ]; then
-                echo -e "\nExiting Ashno."; exit 0
-            else
-                echo -e "\n${RED}Invalid selection.${NC}"; sleep 1
             fi
-        fi
+        done
+        return 1
+    fi
+
+    printf '  Available profiles:\n'
+    local i=1 profile_name
+    for profile_path in "${profiles[@]}"; do
+        profile_name=$(basename "$profile_path")
+        printf '  %d) %s\n' "$i" "$profile_name"
+        i=$((i + 1))
     done
+    printf '  %d) Exit Ashno\n' "$i"
+    print_prompt
+    local choice
+    IFS= read -r choice || return 1
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#profiles[@]}" ]; then
+        SELECTED_PROFILE=$(basename "${profiles[$((choice - 1))]}")
+        return 0
+    fi
+    return 1
 }

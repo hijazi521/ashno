@@ -1,0 +1,32 @@
+name: Ashno CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes shellcheck
+
+      - name: Validate shell syntax
+        run: bash -n ashno install.sh src/*.sh tests/run_tests.sh
+
+      - name: Run ShellCheck
+        run: shellcheck -x ashno src/*.sh tests/run_tests.sh
+
+      - name: Run regression tests
+        run: ./tests/run_tests.sh

@@ -13,7 +13,6 @@ grep
 sed
 gawk
 less
-man
 zsh
 fish
 htop
